@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>雀道特訓 // 日麻清一色聽牌訓練機</title>
+  <style>
+    :root {
+      --felt-dark: #0f291e;
+      --felt-main: #163d2c;
+      --felt-light: #1f523b;
+      --gold: #e6c15a;
+      --gold-dim: rgba(230, 193, 90, 0.3);
+      --tile-face: #fcfaf2;
+      --tile-side: #e0d8c3;
+      --tile-back: #d9822b;
+      --correct: #2ecc71;
+      --missed: #f39c12;
+      --wrong: #e74c3c;
+      --text-light: #eef5f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at center, var(--felt-light) 0%, var(--felt-main) 55%, var(--felt-dark) 100%);
+      color: var(--text-light);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* 頂部標題與統計欄 */
+    header {
+      background: rgba(10, 25, 18, 0.75);
+      border: 1px solid var(--gold-dim);
+      border-radius: 12px;
+      padding: 16px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(6px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: var(--gold);
+      color: #111;
+      font-weight: 900;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+    }
+
+    .brand h1 {
+      font-size: 1.35rem;
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+
+    .stats-bar {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .stat-box {
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: #9ab5a7;
+      display: block;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .stat-value.highlight {
+      color: var(--gold);
+    }
+
+    /* 控制設定列 */
+    .controls-panel {
+      background: rgba(10, 25, 18, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 12px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .control-label {
+      font-size: 0.85rem;
+      color: #b8cfc2;
+      margin-right: 4px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-light);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.18s ease;
+    }
+
+    .btn:hover {
+      background: rgba(230, 193, 90, 0.2);
+      border-color: var(--gold);
+    }
+
+    .btn.active {
+      background: var(--gold);
+      color: #14241b;
+      border-color: var(--gold);
+      font-weight: 800;
+    }
+
+    /* 主牌桌區 */
+    .table-area {
+      background: rgba(0, 0, 0, 0.28);
+      border: 2px solid var(--gold-dim);
+      border-radius: 16px;
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.45);
+      position: relative;
+    }
+
+    .section-title {
+      font-size: 0.9rem;
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* 13張手牌列 */
+    .hand-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 14px 18px;
+      background: rgba(8, 20, 14, 0.6);
+      border-radius: 12px;
+      border-bottom: 4px solid #3c2a1a;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 立體麻將牌設計 */
+    .tile {
+      width: 56px;
+      height: 78px;
+      background: var(--tile-face);
+      border-radius: 6px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow:
+        0 5px 0 var(--tile-side),
+        0 8px 0 var(--tile-back),
+        0 10px 14px rgba(0, 0, 0, 0.55);
+      border: 1px solid #e6e1d3;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      padding: 4px;
+    }
+
+    .tile svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 候選作答牌區 (1-9) */
+    .options-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .options-grid {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .option-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tile.interactive {
+      cursor: pointer;
+    }
+
+    .tile.interactive:hover {
+      transform: translateY(-6px);
+    }
+
+    .tile.interactive.selected {
+      transform: translateY(-10px);
+      outline: 3px solid var(--gold);
+      box-shadow:
+        0 5px 0 var(--tile-side),
+        0 8px 0 var(--tile-back),
+        0 0 18px rgba(230, 193, 90, 0.85);
+    }
+
+    /* 揭曉狀態標記 */
+    .tile.state-correct {
+      outline: 4px solid var(--correct) !important;
+      box-shadow: 0 0 20px rgba(46, 204, 113, 0.85) !important;
+    }
+
+    .tile.state-missed {
+      outline: 4px dashed var(--missed) !important;
+      box-shadow: 0 0 20px rgba(243, 156, 18, 0.85) !important;
+      animation: pulse-missed 1.2s infinite;
+    }
+
+    .tile.state-wrong {
+      outline: 4px solid var(--wrong) !important;
+      opacity: 0.7;
+    }
+
+    @keyframes pulse-missed {
+      0%, 100% { transform: translateY(-6px) scale(1); }
+      50% { transform: translateY(-10px) scale(1.05); }
+    }
+
+    .remain-tag {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.45);
+      color: #b8cfc2;
+    }
+
+    .remain-tag.empty {
+      color: var(--wrong);
+      font-weight: bold;
+    }
+
+    .result-badge {
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      min-height: 20px;
+    }
+
+    .badge-correct { background: var(--correct); color: #000; }
+    .badge-missed  { background: var(--missed);  color: #000; }
+    .badge-wrong   { background: var(--wrong);   color: #fff; }
+
+    /* 操作按鈕列 */
+    .action-bar {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #f3d16b, #d4a737);
+      color: #1a1508;
+      border: none;
+      padding: 12px 32px;
+      font-size: 1rem;
+      font-weight: 900;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(230, 193, 90, 0.4);
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.08);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 12px 22px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+
+    /* 解題回饋與牌理解析區 */
+    .feedback-panel {
+      background: rgba(9, 22, 16, 0.85);
+      border: 1px solid var(--gold-dim);
+      border-radius: 12px;
+      padding: 18px 24px;
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .feedback-panel.visible {
+      display: flex;
+    }
+
+    .feedback-header {
+      font-size: 1.15rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .decomp-list {
+      font-size: 0.9rem;
+      color: #cfe0d6;
+      line-height: 1.7;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .decomp-item {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 6px 12px;
+      border-radius: 6px;
+      border-left: 3px solid var(--gold);
+    }
+
+    @media (max-width: 640px) {
+      .tile {
+        width: 44px;
+        height: 62px;
+      }
+      .hand-container {
+        gap: 4px;
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- 頂部資訊列 -->
+    <header>
+      <div class="brand">
+        <span class="brand-badge">RIICHI LAB</span>
+        <h1>雀道特訓 // 清一色聽牌訓練機</h1>
+      </div>
+      <div class="stats-bar">
+        <div class="stat-box">
+          <span class="stat-label">當前連勝</span>
+          <span class="stat-value highlight" id="stat-streak">0</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">最高連勝</span>
+          <span class="stat-value" id="stat-best">0</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">答題正確率</span>
+          <span class="stat-value" id="stat-acc">0% (0/0)</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">用時</span>
+          <span class="stat-value" id="stat-timer">0.0s</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 設定控制列 -->
+    <section class="controls-panel">
+      <div class="control-group">
+        <span class="control-label">花色選擇：</span>
+        <button class="btn active" id="suit-all" onclick="setSuitMode('all')">隨機花色</button>
+        <button class="btn" id="suit-m" onclick="setSuitMode('m')">萬子 (Man)</button>
+        <button class="btn" id="suit-p" onclick="setSuitMode('p')">筒子 (Pin)</button>
+        <button class="btn" id="suit-s" onclick="setSuitMode('s')">索子 (Sou)</button>
+      </div>
+      <div class="control-group">
+        <button class="btn active" id="btn-sort" onclick="toggleSort()">自動理牌：開</button>
+        <button class="btn" id="btn-hint" onclick="toggleRemainHint()">剩餘枚數提示：關</button>
+        <button class="btn" onclick="resetStats()">重置戰績</button>
+      </div>
+    </section>
+
+    <!-- 主牌桌 -->
+    <main class="table-area">
+      <div class="section-title">
+        <span>▼ 當前門清手牌（13張） ▼</span>
+      </div>
+
+      <!-- 13張手牌容器 -->
+      <div class="hand-container" id="hand-container"></div>
+
+      <!-- 作答選擇區 -->
+      <div class="options-wrapper">
+        <div class="section-title">
+          <span>請點擊所有可胡牌的「待牌（聽牌）」後按下確認（支援鍵盤數字 1-9 與 Enter）</span>
+        </div>
+        <div class="options-grid" id="options-grid"></div>
+      </div>
+
+      <!-- 動作按鈕 -->
+      <div class="action-bar">
+        <button class="btn-primary" id="btn-submit" onclick="handleMainAction()">確認聽牌 (Enter)</button>
+        <button class="btn-secondary" onclick="selectAllOrClear()">全選 / 清空</button>
+        <button class="btn-secondary" onclick="generateNewQuestion()">跳過換題 (Space)</button>
+      </div>
+
+      <!-- 解析與結果面板 -->
+      <div class="feedback-panel" id="feedback-panel">
+        <div class="feedback-header" id="feedback-title"></div>
+        <div class="decomp-list" id="feedback-detail"></div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    /* =========================================================
+       1. 狀態與戰績管理 (LocalStorage)
+       ========================================================= */
+    let suitMode = 'all';       // 'all' | 'm' | 'p' | 's'
+    let currentSuit = 'm';      // 當前題目花色
+    let currentHand = [];       // 13張手牌陣列 (數字 1-9)
+    let displayHand = [];       // 顯示順序的手牌
+    let actualWaits = [];       // 正確答案陣列 (數字 1-9)
+    let waitDecomps = {};       // 記錄每張待牌的拆解方式
+    let selectedWaits = new Set();
+    let isSorted = true;
+    let showRemainHint = false;
+    let isAnswered = false;
+
+    // 計時器
+    let startTime = 0;
+    let timerInterval = null;
+
+    // 戰績資料
+    let stats = JSON.parse(localStorage.getItem('mahjong_trainer_stats') || JSON.stringify({
+      streak: 0,
+      bestStreak: 0,
+      total: 0,
+      correct: 0
+    }));
+
+    function saveStats() {
+      localStorage.setItem('mahjong_trainer_stats', JSON.stringify(stats));
+      updateStatsUI();
+    }
+
+    function updateStatsUI() {
+      document.getElementById('stat-streak').textContent = stats.streak;
+      document.getElementById('stat-best').textContent = stats.bestStreak;
+      const rate = stats.total === 0 ? 0 : Math.round((stats.correct / stats.total) * 100);
+      document.getElementById('stat-acc').textContent = `${rate}% (${stats.correct}/${stats.total})`;
+    }
+
+    function resetStats() {
+      if (!confirm('確定要清空目前的連勝與答題紀錄嗎？')) return;
+      stats = { streak: 0, bestStreak: 0, total: 0, correct: 0 };
+      saveStats();
+    }
+
+    /* =========================================================
+       2. SVG 麻將牌面向量繪製引擎 (萬 / 筒 / 索)
+       ========================================================= */
+    const KANJI_NUMS = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+
+    function createTileSVG(num, suit) {
+      if (suit === 'm') {
+        // 萬子：上方黑字數字，下方紅字「萬」
+        return `
+          <svg viewBox="0 0 60 84">
+            <text x="30" y="36" text-anchor="middle" font-size="28" font-weight="900" fill="#1a1a1a" font-family="serif">${KANJI_NUMS[num]}</text>
+            <text x="30" y="70" text-anchor="middle" font-size="28" font-weight="900" fill="#b81d13" font-family="serif">萬</text>
+          </svg>
+        `;
+      } else if (suit === 'p') {
+        // 筒子：精確座標圓餅
+        const coords = {
+          1: [[30, 42, 16, '#b81d13']],
+          2: [[30, 24, 10, '#164a8a'], [30, 60, 10, '#164a8a']],
+          3: [[18, 22, 8.5, '#164a8a'], [30, 42, 8.5, '#b81d13'], [42, 62, 8.5, '#1b6b3a']],
+          4: [[19, 25, 9, '#164a8a'], [41, 25, 9, '#1b6b3a'], [19, 59, 9, '#1b6b3a'], [41, 59, 9, '#164a8a']],
+          5: [[18, 23, 8, '#164a8a'], [42, 23, 8, '#1b6b3a'], [30, 42, 8, '#b81d13'], [18, 61, 8, '#1b6b3a'], [42, 61, 8, '#164a8a']],
+          6: [[19, 21, 7.5, '#1b6b3a'], [41, 21, 7.5, '#1b6b3a'], [19, 46, 7.5, '#b81d13'], [41, 46, 7.5, '#b81d13'], [19, 64, 7.5, '#b81d13'], [41, 64, 7.5, '#b81d13']],
+          7: [[16, 18, 6.5, '#1b6b3a'], [30, 24, 6.5, '#1b6b3a'], [44, 30, 6.5, '#1b6b3a'], [19, 49, 7, '#b81d13'], [41, 49, 7, '#b81d13'], [19, 66, 7, '#b81d13'], [41, 66, 7, '#b81d13']],
+          8: [[19, 17, 6.5, '#164a8a'], [41, 17, 6.5, '#164a8a'], [19, 34, 6.5, '#164a8a'], [41, 34, 6.5, '#164a8a'], [19, 51, 6.5, '#164a8a'], [41, 51, 6.5, '#164a8a'], [19, 68, 6.5, '#164a8a'], [41, 68, 6.5, '#164a8a']],
+          9: [[15, 20, 6.5, '#164a8a'], [30, 20, 6.5, '#164a8a'], [45, 20, 6.5, '#164a8a'], [15, 42, 6.5, '#b81d13'], [30, 42, 6.5, '#b81d13'], [45, 42, 6.5, '#b81d13'], [15, 64, 6.5, '#1b6b3a'], [30, 64, 6.5, '#1b6b3a'], [45, 64, 6.5, '#1b6b3a']]
+        };
+        const circles = coords[num].map(([cx, cy, r, color]) => `
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" />
+          <circle cx="${cx}" cy="${cy}" r="${r * 0.45}" fill="none" stroke="#fcfaf2" stroke-width="1.8" />
+        `).join('');
+        return `<svg viewBox="0 0 60 84">${circles}</svg>`;
+      } else {
+        // 索子：竹節條設計 (1索為孔雀綠羽徽章)
+        if (num === 1) {
+          return `
+            <svg viewBox="0 0 60 84">
+              <circle cx="30" cy="36" r="14" fill="#1b6b3a" />
+              <circle cx="30" cy="34" r="6" fill="#b81d13" />
+              <path d="M18 58 Q30 42 42 58 L36 72 L24 72 Z" fill="#1b6b3a" />
+              <text x="30" y="75" text-anchor="middle" font-size="11" font-weight="bold" fill="#996515">一索</text>
+            </svg>
+          `;
+        }
+        const bambooLayouts = {
+          2: [[30, 14, 24, '#1b6b3a'], [30, 46, 24, '#1b6b3a']],
+          3: [[30, 12, 22, '#1b6b3a'], [19, 46, 22, '#1b6b3a'], [41, 46, 22, '#1b6b3a']],
+          4: [[19, 14, 23, '#1b6b3a'], [41, 14, 23, '#1b6b3a'], [19, 47, 23, '#1b6b3a'], [41, 47, 23, '#1b6b3a']],
+          5: [[16, 14, 23, '#1b6b3a'], [44, 14, 23, '#1b6b3a'], [30, 30, 23, '#b81d13'], [16, 47, 23, '#1b6b3a'], [44, 47, 23, '#1b6b3a']],
+          6: [[16, 14, 23, '#1b6b3a'], [30, 14, 23, '#1b6b3a'], [44, 14, 23, '#1b6b3a'], [16, 47, 23, '#1b6b3a'], [30, 47, 23, '#1b6b3a'], [44, 47, 23, '#1b6b3a']],
+          7: [[30, 8, 19, '#b81d13'], [16, 32, 19, '#1b6b3a'], [30, 32, 19, '#1b6b3a'], [44, 32, 19, '#1b6b3a'], [16, 55, 19, '#1b6b3a'], [30, 55, 19, '#1b6b3a'], [44, 55, 19, '#1b6b3a']],
+          8: [[15, 14, 22, '#1b6b3a'], [25, 14, 22, '#1b6b3a'], [35, 14, 22, '#1b6b3a'], [45, 14, 22, '#1b6b3a'], [15, 48, 22, '#1b6b3a'], [25, 48, 22, '#1b6b3a'], [35, 48, 22, '#1b6b3a'], [45, 48, 22, '#1b6b3a']],
+          9: [[16, 9, 19, '#1b6b3a'], [30, 9, 19, '#b81d13'], [44, 9, 19, '#1b6b3a'], [16, 33, 19, '#1b6b3a'], [30, 33, 19, '#b81d13'], [44, 33, 19, '#1b6b3a'], [16, 57, 19, '#1b6b3a'], [30, 57, 19, '#b81d13'], [44, 57, 19, '#1b6b3a']]
+        };
+        const sticks = bambooLayouts[num].map(([x, y, h, color]) => `
+          <rect x="${x - 3}" y="${y}" width="6" height="${h}" rx="3" fill="${color}" />
+          <line x1="${x - 3}" y1="${y + h/2}" x2="${x + 3}" y2="${y + h/2}" stroke="#fcfaf2" stroke-width="1.5" />
+        `).join('');
+        return `<svg viewBox="0 0 60 84">${sticks}</svg>`;
+      }
+    }
+
+    /* =========================================================
+       3. 日麻胡牌判定與拆解演算法 (4面子1雀頭 + 七對子)
+       ========================================================= */
+    // 尋找單一胡牌牌型的具體拆解字串 (供解答面板展示)
+    function findWinningDecomposition(counts14) {
+      // 1. 檢查是否為七對子 (7個不同的對子)
+      let pairNums = [];
+      for (let i = 1; i <= 9; i++) {
+        if (counts14[i] === 2) pairNums.push(`${i}${i}`);
+      }
+      if (pairNums.length === 7) {
+        return `【七對子】 ` + pairNums.map(p => `[${p}]`).join(' ');
+      }
+
+      // 2. 檢查標準型 4面子 + 1雀頭
+      for (let jantai = 1; jantai <= 9; jantai++) {
+        if (counts14[jantai] >= 2) {
+          counts14[jantai] -= 2;
+          const melds = [];
+          if (extractMelds(counts14, 1, melds)) {
+            counts14[jantai] += 2;
+            return `【雀頭 ${jantai}${jantai}】 + 面子：` + melds.map(m => `[${m}]`).join(' ');
+          }
+          counts14[jantai] += 2;
+        }
+      }
+      return null;
+    }
+
+    function extractMelds(counts, startIdx, melds) {
+      let i = startIdx;
+      while (i <= 9 && counts[i] === 0) i++;
+      if (i > 9) return true; // 所有牌皆已成功拆成面子
+
+      // 嘗試拆刻子 (AAA)
+      if (counts[i] >= 3) {
+        counts[i] -= 3;
+        melds.push(`${i}${i}${i}`);
+        if (extractMelds(counts, i, melds)) {
+          counts[i] += 3;
+          return true;
+        }
+        melds.pop();
+        counts[i] += 3;
+      }
+
+      // 嘗試拆順子 (ABC)
+      if (i <= 7 && counts[i + 1] > 0 && counts[i + 2] > 0) {
+        counts[i]--;
+        counts[i + 1]--;
+        counts[i + 2]--;
+        melds.push(`${i}${i+1}${i+2}`);
+        if (extractMelds(counts, i, melds)) {
+          counts[i]++;
+          counts[i + 1]++;
+          counts[i + 2]++;
+          return true;
+        }
+        melds.pop();
+        counts[i]++;
+        counts[i + 1]++;
+        counts[i + 2]++;
+      }
+
+      return false;
+    }
+
+    // 計算 13 張手牌的所有聽牌 (1-9)
+    function solveAllWaits(hand13) {
+      const counts = Array(10).fill(0);
+      hand13.forEach(n => counts[n]++);
+
+      const waits = [];
+      const decomps = {};
+
+      for (let candidate = 1; candidate <= 9; candidate++) {
+        // 若手牌已有4張，現實中不存在第5張牌可自摸或榮和
+        if (counts[candidate] >= 4) continue;
+
+        counts[candidate]++;
+        const decompStr = findWinningDecomposition(counts);
+        if (decompStr) {
+          waits.push(candidate);
+          decomps[candidate] = decompStr;
+        }
+        counts[candidate]--;
+      }
+      return { waits, decomps };
+    }
+
+    /* =========================================================
+       4. 逆向生成高複雜度「門清清一色」13張題目
+       ========================================================= */
+    function generateNewQuestion() {
+      isAnswered = false;
+      selectedWaits.clear();
+      document.getElementById('feedback-panel').classList.remove('visible');
+      document.getElementById('btn-submit').textContent = '確認聽牌 (Enter)';
+
+      // 決定花色
+      const suits = ['m', 'p', 's'];
+      currentSuit = suitMode === 'all' ? suits[Math.floor(Math.random() * 3)] : suitMode;
+
+      // 逆向生成直到產生至少有 2 個以上聽牌或複合型的好題目
+      while (true) {
+        const counts = Array(10).fill(0);
+        const head = Math.floor(Math.random() * 9) + 1;
+        counts[head] += 2;
+
+        let valid = true;
+        for (let m = 0; m < 4; m++) {
+          // 75% 機率放順子、25% 機率放刻子，增加複合多面聽機率
+          if (Math.random() < 0.75) {
+            const start = Math.floor(Math.random() * 7) + 1;
+            counts[start]++;
+            counts[start + 1]++;
+            counts[start + 2]++;
+          } else {
+            const trip = Math.floor(Math.random() * 9) + 1;
+            counts[trip] += 3;
+          }
+        }
+
+        // 檢查是否任何數字超過 4 張
+        for (let i = 1; i <= 9; i++) {
+          if (counts[i] > 4) { valid = false; break; }
+        }
+        if (!valid) continue;
+
+        // 展開為 14 張並隨機抽走 1 張變成 13 張
+        const tiles14 = [];
+        for (let i = 1; i <= 9; i++) {
+          for (let c = 0; c < counts[i]; c++) tiles14.push(i);
+        }
+        const removeIdx = Math.floor(Math.random() * 14);
+        tiles14.splice(removeIdx, 1);
+
+        const solved = solveAllWaits(tiles14);
+        // 優先挑選待牌數 >= 2 的多面聽題目，提高訓練價值
+        if (solved.waits.length >= 2 || Math.random() < 0.25) {
+          currentHand = tiles14.slice().sort((a, b) => a - b);
+          actualWaits = solved.waits;
+          waitDecomps = solved.decomps;
+          break;
+        }
+      }
+
+      syncDisplayHand();
+      renderAll();
+      startQuestionTimer();
+    }
+
+    function syncDisplayHand() {
+      displayHand = currentHand.slice();
+      if (!isSorted) {
+        for (let i = displayHand.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [displayHand[i], displayHand[j]] = [displayHand[j], displayHand[i]];
+        }
+      }
+    }
+
+    /* =========================================================
+       5. 畫面渲染與互動邏輯
+       ========================================================= */
+    function renderAll() {
+      // 渲染 13 張手牌
+      const handEl = document.getElementById('hand-container');
+      handEl.innerHTML = displayHand.map(num => `
+        <div class="tile">${createTileSVG(num, currentSuit)}</div>
+      `).join('');
+
+      // 統計手牌各數字已使用張數
+      const usedCounts = Array(10).fill(0);
+      currentHand.forEach(n => usedCounts[n]++);
+
+      // 渲染 1-9 候選牌
+      const gridEl = document.getElementById('options-grid');
+      let html = '';
+      for (let num = 1; num <= 9; num++) {
+        const remain = 4 - usedCounts[num];
+        const isSelected = selectedWaits.has(num);
+        const isActual = actualWaits.includes(num);
+
+        let stateClass = '';
+        let badgeHTML = `<div class="result-badge"></div>`;
+
+        if (isAnswered) {
+          if (isActual && isSelected) {
+            stateClass = 'state-correct';
+            badgeHTML = `<div class="result-badge badge-correct">✔ 命中</div>`;
+          } else if (isActual && !isSelected) {
+            stateClass = 'state-missed';
+            badgeHTML = `<div class="result-badge badge-missed">▲ 漏選</div>`;
+          } else if (!isActual && isSelected) {
+            stateClass = 'state-wrong';
+            badgeHTML = `<div class="result-badge badge-wrong">✖ 誤選</div>`;
+          }
+        }
+
+        const remainHTML = showRemainHint
+          ? `<span class="remain-tag ${remain === 0 ? 'empty' : ''}">剩 ${remain} 枚</span>`
+          : '';
+
+        html += `
+          <div class="option-slot">
+            <div class="tile interactive ${isSelected ? 'selected' : ''} ${stateClass}" onclick="toggleOption(${num})">
+              ${createTileSVG(num, currentSuit)}
+            </div>
+            ${remainHTML}
+            ${badgeHTML}
+          </div>
+        `;
+      }
+      gridEl.innerHTML = html;
+    }
+
+    function toggleOption(num) {
+      if (isAnswered) return;
+      if (selectedWaits.has(num)) {
+        selectedWaits.delete(num);
+      } else {
+        selectedWaits.add(num);
+      }
+      renderAll();
+    }
+
+    function selectAllOrClear() {
+      if (isAnswered) return;
+      if (selectedWaits.size > 0) {
+        selectedWaits.clear();
+      } else {
+        for (let i = 1; i <= 9; i++) selectedWaits.add(i);
+      }
+      renderAll();
+    }
+
+    function handleMainAction() {
+      if (isAnswered) {
+        generateNewQuestion();
+      } else {
+        submitAnswer();
+      }
+    }
+
+    function submitAnswer() {
+      if (selectedWaits.size === 0) {
+        alert('請至少點擊選擇一張你認為可胡牌的待牌！');
+        return;
+      }
+
+      isAnswered = true;
+      stopQuestionTimer();
+
+      // 比對是否完全一致
+      const userArr = Array.from(selectedWaits).sort((a, b) => a - b);
+      const isPerfect =
+        userArr.length === actualWaits.length &&
+        userArr.every((val, idx) => val === actualWaits[idx]);
+
+      stats.total++;
+      if (isPerfect) {
+        stats.correct++;
+        stats.streak++;
+        if (stats.streak > stats.bestStreak) stats.bestStreak = stats.streak;
+      } else {
+        stats.streak = 0;
+      }
+      saveStats();
+      renderAll();
+
+      // 顯示牌理解析面板
+      const suitName = { m: '萬', p: '筒', s: '索' }[currentSuit];
+      const panel = document.getElementById('feedback-panel');
+      const titleEl = document.getElementById('feedback-title');
+      const detailEl = document.getElementById('feedback-detail');
+
+      const waitNames = actualWaits.map(n => `${n}${suitName}`).join('、');
+      if (isPerfect) {
+        titleEl.innerHTML = `<span style="color: var(--correct);">● 完全正確！</span> 正確待牌為：【${waitNames}】（共 ${actualWaits.length} 面聽）`;
+      } else {
+        titleEl.innerHTML = `<span style="color: var(--wrong);">● 判定失誤！</span> 正確待牌應為：【${waitNames}】（共 ${actualWaits.length} 面聽）`;
+      }
+
+      detailEl.innerHTML = actualWaits.map(w => `
+        <div class="decomp-item">
+          <strong>進張 【${w}${suitName}】 和牌拆解：</strong> ${waitDecomps[w]}
+        </div>
+      `).join('');
+
+      panel.classList.add('visible');
+      document.getElementById('btn-submit').textContent = '下一題 (Enter)';
+    }
+
+    /* =========================================================
+       6. 輔助開關、計時器與鍵盤快捷鍵
+       ========================================================= */
+    function setSuitMode(mode) {
+      suitMode = mode;
+      ['all', 'm', 'p', 's'].forEach(m => {
+        document.getElementById(`suit-${m}`).classList.toggle('active', m === mode);
+      });
+      generateNewQuestion();
+    }
+
+    function toggleSort() {
+      isSorted = !isSorted;
+      const btn = document.getElementById('btn-sort');
+      btn.textContent = `自動理牌：${isSorted ? '開' : '關 (亂序實戰)'}`;
+      btn.classList.toggle('active', isSorted);
+      syncDisplayHand();
+      renderAll();
+    }
+
+    function toggleRemainHint() {
+      showRemainHint = !showRemainHint;
+      const btn = document.getElementById('btn-hint');
+      btn.textContent = `剩餘枚數提示：${showRemainHint ? '開' : '關'}`;
+      btn.classList.toggle('active', showRemainHint);
+      renderAll();
+    }
+
+    function startQuestionTimer() {
+      clearInterval(timerInterval);
+      startTime = performance.now();
+      timerInterval = setInterval(() => {
+        const elapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+        document.getElementById('stat-timer').textContent = `${elapsed}s`;
+      }, 100);
+    }
+
+    function stopQuestionTimer() {
+      clearInterval(timerInterval);
+    }
+
+    // 鍵盤快捷鍵支援 (1-9 選牌，Enter 送出/下一題，Space 換題)
+    window.addEventListener('keydown', (e) => {
+      if (e.key >= '1' && e.key <= '9') {
+        toggleOption(parseInt(e.key, 10));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleMainAction();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        generateNewQuestion();
+      }
+    });
+
+    // 啟動初始化
+    updateStatsUI();
+    generateNewQuestion();
+  </script>
+</body>
+</html>
