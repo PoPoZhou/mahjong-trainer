@@ -46,7 +46,6 @@
       gap: 18px;
     }
 
-    /* 頂部標題與統計欄 */
     header {
       background: rgba(10, 25, 18, 0.75);
       border: 1px solid var(--gold-dim);
@@ -109,7 +108,6 @@
       color: var(--gold);
     }
 
-    /* 控制設定列 */
     .controls-panel {
       background: rgba(10, 25, 18, 0.55);
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -159,7 +157,6 @@
       font-weight: 800;
     }
 
-    /* 主牌桌區 */
     .table-area {
       background: rgba(0, 0, 0, 0.28);
       border: 2px solid var(--gold-dim);
@@ -183,7 +180,6 @@
       gap: 10px;
     }
 
-    /* 13張手牌列 */
     .hand-container {
       display: flex;
       justify-content: center;
@@ -194,9 +190,10 @@
       border-radius: 12px;
       border-bottom: 4px solid #3c2a1a;
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+      min-height: 106px;
+      align-items: center;
     }
 
-    /* 立體麻將牌設計 */
     .tile {
       width: 56px;
       height: 78px;
@@ -212,16 +209,36 @@
         0 8px 0 var(--tile-back),
         0 10px 14px rgba(0, 0, 0, 0.55);
       border: 1px solid #e6e1d3;
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, outline 0.15s ease;
       padding: 4px;
     }
 
     .tile svg {
       width: 100%;
       height: 100%;
+      pointer-events: none;
     }
 
-    /* 候選作答牌區 (1-9) */
+    /* 手牌可拖曳互動 */
+    .tile.hand-tile {
+      cursor: grab;
+    }
+    .tile.hand-tile:active {
+      cursor: grabbing;
+    }
+    .tile.hand-tile.dragging {
+      opacity: 0.4;
+    }
+    .tile.hand-tile.drag-over {
+      transform: translateY(-8px);
+      outline: 3px dashed var(--gold);
+    }
+    .tile.hand-tile.selected-for-swap {
+      transform: translateY(-10px);
+      outline: 3px solid var(--gold);
+      box-shadow: 0 5px 0 var(--tile-side), 0 8px 0 var(--tile-back), 0 0 15px rgba(230, 193, 90, 0.8);
+    }
+
     .options-wrapper {
       display: flex;
       flex-direction: column;
@@ -261,7 +278,6 @@
         0 0 18px rgba(230, 193, 90, 0.85);
     }
 
-    /* 揭曉狀態標記 */
     .tile.state-correct {
       outline: 4px solid var(--correct) !important;
       box-shadow: 0 0 20px rgba(46, 204, 113, 0.85) !important;
@@ -308,7 +324,6 @@
     .badge-missed  { background: var(--missed);  color: #000; }
     .badge-wrong   { background: var(--wrong);   color: #fff; }
 
-    /* 操作按鈕列 */
     .action-bar {
       display: flex;
       gap: 14px;
@@ -350,7 +365,6 @@
       background: rgba(255, 255, 255, 0.22);
     }
 
-    /* 解題回饋與牌理解析區 */
     .feedback-panel {
       background: rgba(9, 22, 16, 0.85);
       border: 1px solid var(--gold-dim);
@@ -405,7 +419,6 @@
 <body>
 
   <div class="app-container">
-    <!-- 頂部資訊列 -->
     <header>
       <div class="brand">
         <span class="brand-badge">RIICHI LAB</span>
@@ -431,7 +444,6 @@
       </div>
     </header>
 
-    <!-- 設定控制列 -->
     <section class="controls-panel">
       <div class="control-group">
         <span class="control-label">花色選擇：</span>
@@ -447,16 +459,13 @@
       </div>
     </section>
 
-    <!-- 主牌桌 -->
     <main class="table-area">
       <div class="section-title">
-        <span>▼ 當前門清手牌（13張） ▼</span>
+        <span>▼ 當前門清手牌（可直接拖曳或點兩張牌互換位置來理牌） ▼</span>
       </div>
 
-      <!-- 13張手牌容器 -->
       <div class="hand-container" id="hand-container"></div>
 
-      <!-- 作答選擇區 -->
       <div class="options-wrapper">
         <div class="section-title">
           <span>請點擊所有可胡牌的「待牌（聽牌）」後按下確認（支援鍵盤數字 1-9 與 Enter）</span>
@@ -464,14 +473,12 @@
         <div class="options-grid" id="options-grid"></div>
       </div>
 
-      <!-- 動作按鈕 -->
       <div class="action-bar">
         <button class="btn-primary" id="btn-submit" onclick="handleMainAction()">確認聽牌 (Enter)</button>
         <button class="btn-secondary" onclick="selectAllOrClear()">全選 / 清空</button>
         <button class="btn-secondary" onclick="generateNewQuestion()">跳過換題 (Space)</button>
       </div>
 
-      <!-- 解析與結果面板 -->
       <div class="feedback-panel" id="feedback-panel">
         <div class="feedback-header" id="feedback-title"></div>
         <div class="decomp-list" id="feedback-detail"></div>
@@ -480,25 +487,22 @@
   </div>
 
   <script>
-    /* =========================================================
-       1. 狀態與戰績管理 (LocalStorage)
-       ========================================================= */
-    let suitMode = 'all';       // 'all' | 'm' | 'p' | 's'
-    let currentSuit = 'm';      // 當前題目花色
-    let currentHand = [];       // 13張手牌陣列 (數字 1-9)
-    let displayHand = [];       // 顯示順序的手牌
-    let actualWaits = [];       // 正確答案陣列 (數字 1-9)
-    let waitDecomps = {};       // 記錄每張待牌的拆解方式
+    let suitMode = 'all';
+    let currentSuit = 'm';
+    let currentHand = [];
+    let displayHand = [];
+    let actualWaits = [];
+    let waitDecomps = {};
     let selectedWaits = new Set();
     let isSorted = true;
     let showRemainHint = false;
     let isAnswered = false;
 
-    // 計時器
     let startTime = 0;
     let timerInterval = null;
+    let draggedIndex = null;
+    let selectedSwapIndex = null; // 用於點擊兩張牌互換
 
-    // 戰績資料
     let stats = JSON.parse(localStorage.getItem('mahjong_trainer_stats') || JSON.stringify({
       streak: 0,
       bestStreak: 0,
@@ -524,14 +528,10 @@
       saveStats();
     }
 
-    /* =========================================================
-       2. SVG 麻將牌面向量繪製引擎 (萬 / 筒 / 索)
-       ========================================================= */
     const KANJI_NUMS = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
 
     function createTileSVG(num, suit) {
       if (suit === 'm') {
-        // 萬子：上方黑字數字，下方紅字「萬」
         return `
           <svg viewBox="0 0 60 84">
             <text x="30" y="36" text-anchor="middle" font-size="28" font-weight="900" fill="#1a1a1a" font-family="serif">${KANJI_NUMS[num]}</text>
@@ -539,7 +539,6 @@
           </svg>
         `;
       } else if (suit === 'p') {
-        // 筒子：精確座標圓餅
         const coords = {
           1: [[30, 42, 16, '#b81d13']],
           2: [[30, 24, 10, '#164a8a'], [30, 60, 10, '#164a8a']],
@@ -557,7 +556,6 @@
         `).join('');
         return `<svg viewBox="0 0 60 84">${circles}</svg>`;
       } else {
-        // 索子：竹節條設計 (1索為孔雀綠羽徽章)
         if (num === 1) {
           return `
             <svg viewBox="0 0 60 84">
@@ -586,12 +584,7 @@
       }
     }
 
-    /* =========================================================
-       3. 日麻胡牌判定與拆解演算法 (4面子1雀頭 + 七對子)
-       ========================================================= */
-    // 尋找單一胡牌牌型的具體拆解字串 (供解答面板展示)
     function findWinningDecomposition(counts14) {
-      // 1. 檢查是否為七對子 (7個不同的對子)
       let pairNums = [];
       for (let i = 1; i <= 9; i++) {
         if (counts14[i] === 2) pairNums.push(`${i}${i}`);
@@ -600,7 +593,6 @@
         return `【七對子】 ` + pairNums.map(p => `[${p}]`).join(' ');
       }
 
-      // 2. 檢查標準型 4面子 + 1雀頭
       for (let jantai = 1; jantai <= 9; jantai++) {
         if (counts14[jantai] >= 2) {
           counts14[jantai] -= 2;
@@ -618,9 +610,8 @@
     function extractMelds(counts, startIdx, melds) {
       let i = startIdx;
       while (i <= 9 && counts[i] === 0) i++;
-      if (i > 9) return true; // 所有牌皆已成功拆成面子
+      if (i > 9) return true;
 
-      // 嘗試拆刻子 (AAA)
       if (counts[i] >= 3) {
         counts[i] -= 3;
         melds.push(`${i}${i}${i}`);
@@ -632,7 +623,6 @@
         counts[i] += 3;
       }
 
-      // 嘗試拆順子 (ABC)
       if (i <= 7 && counts[i + 1] > 0 && counts[i + 2] > 0) {
         counts[i]--;
         counts[i + 1]--;
@@ -653,7 +643,6 @@
       return false;
     }
 
-    // 計算 13 張手牌的所有聽牌 (1-9)
     function solveAllWaits(hand13) {
       const counts = Array(10).fill(0);
       hand13.forEach(n => counts[n]++);
@@ -662,9 +651,7 @@
       const decomps = {};
 
       for (let candidate = 1; candidate <= 9; candidate++) {
-        // 若手牌已有4張，現實中不存在第5張牌可自摸或榮和
         if (counts[candidate] >= 4) continue;
-
         counts[candidate]++;
         const decompStr = findWinningDecomposition(counts);
         if (decompStr) {
@@ -676,20 +663,16 @@
       return { waits, decomps };
     }
 
-    /* =========================================================
-       4. 逆向生成高複雜度「門清清一色」13張題目
-       ========================================================= */
     function generateNewQuestion() {
       isAnswered = false;
       selectedWaits.clear();
+      selectedSwapIndex = null;
       document.getElementById('feedback-panel').classList.remove('visible');
       document.getElementById('btn-submit').textContent = '確認聽牌 (Enter)';
 
-      // 決定花色
       const suits = ['m', 'p', 's'];
       currentSuit = suitMode === 'all' ? suits[Math.floor(Math.random() * 3)] : suitMode;
 
-      // 逆向生成直到產生至少有 2 個以上聽牌或複合型的好題目
       while (true) {
         const counts = Array(10).fill(0);
         const head = Math.floor(Math.random() * 9) + 1;
@@ -697,7 +680,6 @@
 
         let valid = true;
         for (let m = 0; m < 4; m++) {
-          // 75% 機率放順子、25% 機率放刻子，增加複合多面聽機率
           if (Math.random() < 0.75) {
             const start = Math.floor(Math.random() * 7) + 1;
             counts[start]++;
@@ -709,13 +691,11 @@
           }
         }
 
-        // 檢查是否任何數字超過 4 張
         for (let i = 1; i <= 9; i++) {
           if (counts[i] > 4) { valid = false; break; }
         }
         if (!valid) continue;
 
-        // 展開為 14 張並隨機抽走 1 張變成 13 張
         const tiles14 = [];
         for (let i = 1; i <= 9; i++) {
           for (let c = 0; c < counts[i]; c++) tiles14.push(i);
@@ -724,7 +704,6 @@
         tiles14.splice(removeIdx, 1);
 
         const solved = solveAllWaits(tiles14);
-        // 優先挑選待牌數 >= 2 的多面聽題目，提高訓練價值
         if (solved.waits.length >= 2 || Math.random() < 0.25) {
           currentHand = tiles14.slice().sort((a, b) => a - b);
           actualWaits = solved.waits;
@@ -749,20 +728,76 @@
     }
 
     /* =========================================================
-       5. 畫面渲染與互動邏輯
+       手牌拖曳與點擊交換邏輯 (Hand Tile Reordering)
        ========================================================= */
+    function handleTileClick(index) {
+      if (selectedSwapIndex === null) {
+        selectedSwapIndex = index;
+      } else {
+        // 互換兩張牌位置
+        const temp = displayHand[selectedSwapIndex];
+        displayHand[selectedSwapIndex] = displayHand[index];
+        displayHand[index] = temp;
+        selectedSwapIndex = null;
+      }
+      renderAll();
+    }
+
+    function handleDragStart(e, index) {
+      draggedIndex = index;
+      e.dataTransfer.setData('text/plain', index);
+      setTimeout(() => e.target.classList.add('dragging'), 0);
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+      document.querySelectorAll('.hand-tile').forEach(t => t.classList.remove('drag-over'));
+      draggedIndex = null;
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+    }
+
+    function handleDragEnter(e) {
+      e.preventDefault();
+      const tileEl = e.target.closest('.hand-tile');
+      if (tileEl) tileEl.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+      const tileEl = e.target.closest('.hand-tile');
+      if (tileEl) tileEl.classList.remove('drag-over');
+    }
+
+    function handleDrop(e, targetIndex) {
+      e.preventDefault();
+      if (draggedIndex === null || draggedIndex === targetIndex) return;
+      const movedItem = displayHand.splice(draggedIndex, 1)[0];
+      displayHand.splice(targetIndex, 0, movedItem);
+      renderAll();
+    }
+
     function renderAll() {
-      // 渲染 13 張手牌
       const handEl = document.getElementById('hand-container');
-      handEl.innerHTML = displayHand.map(num => `
-        <div class="tile">${createTileSVG(num, currentSuit)}</div>
+      handEl.innerHTML = displayHand.map((num, idx) => `
+        <div class="tile hand-tile ${selectedSwapIndex === idx ? 'selected-for-swap' : ''}"
+             draggable="true"
+             onclick="handleTileClick(${idx})"
+             ondragstart="handleDragStart(event, ${idx})"
+             ondragend="handleDragEnd(event)"
+             ondragover="handleDragOver(event)"
+             ondragenter="handleDragEnter(event)"
+             ondragleave="handleDragLeave(event)"
+             ondrop="handleDrop(event, ${idx})"
+             title="點擊兩張牌可互換位置，或直接拖曳移動">
+          ${createTileSVG(num, currentSuit)}
+        </div>
       `).join('');
 
-      // 統計手牌各數字已使用張數
       const usedCounts = Array(10).fill(0);
       currentHand.forEach(n => usedCounts[n]++);
 
-      // 渲染 1-9 候選牌
       const gridEl = document.getElementById('options-grid');
       let html = '';
       for (let num = 1; num <= 9; num++) {
@@ -840,7 +875,6 @@
       isAnswered = true;
       stopQuestionTimer();
 
-      // 比對是否完全一致
       const userArr = Array.from(selectedWaits).sort((a, b) => a - b);
       const isPerfect =
         userArr.length === actualWaits.length &&
@@ -857,7 +891,6 @@
       saveStats();
       renderAll();
 
-      // 顯示牌理解析面板
       const suitName = { m: '萬', p: '筒', s: '索' }[currentSuit];
       const panel = document.getElementById('feedback-panel');
       const titleEl = document.getElementById('feedback-title');
@@ -880,9 +913,6 @@
       document.getElementById('btn-submit').textContent = '下一題 (Enter)';
     }
 
-    /* =========================================================
-       6. 輔助開關、計時器與鍵盤快捷鍵
-       ========================================================= */
     function setSuitMode(mode) {
       suitMode = mode;
       ['all', 'm', 'p', 's'].forEach(m => {
@@ -921,7 +951,6 @@
       clearInterval(timerInterval);
     }
 
-    // 鍵盤快捷鍵支援 (1-9 選牌，Enter 送出/下一題，Space 換題)
     window.addEventListener('keydown', (e) => {
       if (e.key >= '1' && e.key <= '9') {
         toggleOption(parseInt(e.key, 10));
@@ -934,7 +963,6 @@
       }
     });
 
-    // 啟動初始化
     updateStatsUI();
     generateNewQuestion();
   </script>
